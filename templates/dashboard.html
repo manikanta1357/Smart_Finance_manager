@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Finance Manager - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="sidebar">
+            <h2 class="sidebar-title">Smart Finance</h2>
+            <button id="budgetBtn" class="btn sidebar-btn"><i class="fas fa-wallet"></i> Budget</button>
+            <button id="expensesBtn" class="btn sidebar-btn"><i class="fas fa-shopping-cart"></i> Expenses</button>
+            <button id="analysisBtn" class="btn sidebar-btn"><i class="fas fa-chart-line"></i> Analysis</button>
+            <button id="goalsBtn" class="btn sidebar-btn"><i class="fas fa-bullseye"></i> Goals</button>
+            <button id="savingsBtn" class="btn sidebar-btn"><i class="fas fa-piggy-bank"></i> Savings</button>
+            <form id="logoutForm" method="POST" action="{{ url_for('logout') }}">
+                <button type="submit" id="logoutBtn" class="btn btn-logout sidebar-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            </form>
+        </div>
+        <div class="content">
+            <h1 class="welcome-text">Welcome, {{ username|default('User') }}!</h1>
+
+            <!-- Budget Section -->
+            <div id="budgetSection" class="section">
+                <h2>Budget Overview</h2>
+                <div class="card">
+                    <p>Remaining Budget: ₹<span id="remainingBudget">{{ budget|default(0) }}</span></p>
+                    <div class="input-group">
+                        <input type="number" id="budgetIncrease" placeholder="Amount to Add" min="0" required>
+                        <button id="increaseBudgetBtn" class="btn btn-action"><i class="fas fa-plus"></i> Increase Budget</button>
+                    </div>
+                </div>
+                <div class="planning-buttons">
+                    <button id="monthlyPlanningBtn" class="btn btn-planning"><i class="fas fa-calendar-alt"></i> Monthly Planning</button>
+                    <button id="yearlyPlanningBtn" class="btn btn-planning"><i class="fas fa-calendar"></i> Yearly Planning</button>
+                </div>
+                <div id="monthlyPlanning" class="planning-section hidden">
+                    <p>Daily Usable: ₹<span id="dailyBudget">0</span></p>
+                    <p>Weekly Usable: ₹<span id="weeklyBudgetMonthly">0</span></p>
+                </div>
+                <div id="yearlyPlanning" class="planning-section hidden">
+                    <p>Weekly Usable: ₹<span id="weeklyBudgetYearly">0</span></p>
+                    <p>Monthly Usable: ₹<span id="monthlyBudgetYearly">0</span></p>
+                </div>
+            </div>
+
+            <!-- Expenses Section -->
+            <div id="expensesSection" class="section hidden">
+                <h2>Expense Tracker</h2>
+                <div class="card">
+                    <div class="input-group">
+                        <input type="number" id="expenseAmount" placeholder="Amount" min="0" required>
+                        <input type="text" id="expenseReason" placeholder="Reason" required>
+                        <button id="addExpenseBtn" class="btn btn-action"><i class="fas fa-plus"></i> Add Expense</button>
+                    </div>
+                    <ul id="expenseList" class="expense-list">
+                        {% if expenses|length > 0 %}
+                            {% for expense in expenses %}
+                                <li class="expense-item" data-amount="{{ expense.amount }}">{{ expense.reason }}: ₹{{ expense.amount }}</li>
+                            {% endfor %}
+                        {% else %}
+                            <li class="expense-item" data-amount="0">No expenses yet.</li>
+                        {% endif %}
+                    </ul>
+                    <button id="clearDataBtn" class="btn btn-clear"><i class="fas fa-trash-alt"></i> Clear Data</button>
+                </div>
+            </div>
+
+            <!-- Goals Section -->
+            <div id="goalsSection" class="section hidden">
+                <h2>Goal Setting</h2>
+                <div class="card">
+                    <div class="input-group">
+                        <input type="text" id="goalName" placeholder="Goal Name" required>
+                        <input type="number" id="goalTarget" placeholder="Target Amount" min="0" required>
+                        <button id="addGoalBtn" class="btn btn-action"><i class="fas fa-plus"></i> Add Goal</button>
+                    </div>
+                    <ul id="goalList" class="goal-list">
+                        {% if goals|length > 0 %}
+                            {% for goal in goals %}
+                                <li class="goal-item" data-goal-name="{{ goal.goal_name }}">
+                                    <div>{{ goal.goal_name }}: ₹{{ goal.current_amount }} / ₹{{ goal.target_amount }}</div>
+                                    <progress value="{{ goal.current_amount }}" max="{{ goal.target_amount }}"></progress>
+                                    <div class="input-group">
+                                        <input type="number" class="goal-contribution" placeholder="Contribute" min="0">
+                                        <button class="btn btn-action contribute-btn"><i class="fas fa-plus"></i> Add</button>
+                                        <button class="btn btn-clear delete-goal-btn"><i class="fas fa-trash-alt"></i> Delete</button>
+                                    </div>
+                                    <div class="goal-analysis">
+                                        <p>Remaining: ₹<span class="remaining-amount">{{ goal.target_amount - goal.current_amount }}</span></p>
+                                        <input type="number" class="goal-timeframe" placeholder="Days to Achieve" min="1">
+                                        <p>Savings Needed: Daily ₹<span class="daily-savings">0</span> | Weekly ₹<span class="weekly-savings">0</span> | Monthly ₹<span class="monthly-savings">0</span></p>
+                                    </div>
+                                </li>
+                            {% endfor %}
+                        {% else %}
+                            <li class="goal-item" data-goal-name="none">No goals set yet.</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Savings Section -->
+            <div id="savingsSection" class="section hidden">
+                <h2>Savings Account</h2>
+                <div class="card">
+                    <p>Savings Balance: ₹<span id="savingsBalance">{{ savings_balance|default(0) }}</span></p>
+                    <div class="input-group">
+                        <input type="number" id="savingsAmount" placeholder="Amount" min="0" required>
+                        <select id="savingsSource">
+                            <option value="direct">Direct Deposit</option>
+                            <option value="main">From Main Account</option>
+                        </select>
+                        <button id="addSavingsBtn" class="btn btn-action"><i class="fas fa-plus"></i> Add to Savings</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analysis Section -->
+            <div id="analysisSection" class="section hidden">
+                <h2>Financial Analysis</h2>
+                <div class="card analysis-card">
+                    <div class="analysis-summary">
+                        <p>Remaining Budget: ₹<span id="analysisRemainingBudget">{{ budget|default(0) }}</span></p>
+                        <p>Savings Balance: ₹<span id="analysisSavingsBalance">{{ savings_balance|default(0) }}</span></p>
+                        <p>Daily Usable: ₹<span id="analysisDailyBudget"></span> | Weekly Usable: ₹<span id="analysisWeeklyBudget"></span> | Monthly Usable: ₹<span id="analysisMonthlyBudget"></span></p>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Budget Allocation (Percentage of Total)</h3>
+                        <canvas id="budgetChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Expense vs Savings Breakdown</h3>
+                        <canvas id="sankeyChart"></canvas>
+                    </div>
+                    <div class="goals-analysis">
+                        <h3>Goals Progress</h3>
+                        <ul id="goalsAnalysisList" class="goal-list">
+                            {% if goals|length > 0 %}
+                                {% for goal in goals %}
+                                    <li class="goal-item" data-goal-name="{{ goal.goal_name }}">{{ goal.goal_name }}: ₹{{ goal.current_amount }} / ₹{{ goal.target_amount }}
+                                        <progress value="{{ goal.current_amount }}" max="{{ goal.target_amount }}"></progress>
+                                    </li>
+                                {% endfor %}
+                            {% else %}
+                                <li class="goal-item" data-goal-name="none">No goals set yet.</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <p>© 2025 Smart Finance Manager. All rights reserved.</p>
+    </footer>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        let budget = JSON.parse('{{ budget|default(0)|tojson|safe }}');
+        let expenses = JSON.parse('{{ expenses|default([])|tojson|safe }}');
+        let goals = JSON.parse('{{ goals|default([])|tojson|safe }}');
+        let savings_balance = JSON.parse('{{ savings_balance|default(0)|tojson|safe }}');
+    
+        let initialBudget = budget + (Array.isArray(expenses) && expenses.length > 0 
+            ? expenses.reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0) 
+            : 0) + savings_balance;
+    
+        if (typeof updateBudgetDisplays === "function") updateBudgetDisplays();
+        if (typeof animatePageLoad === "function") animatePageLoad();
+    </script>
+</body>
+</html>
